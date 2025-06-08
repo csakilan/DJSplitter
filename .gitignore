@@ -1,0 +1,19 @@
+# Python
+venv/
+splitterEnvV2/
+__pycache__/
+*.pyc
+
+# Node / React
+node_modules/
+build/
+dist/
+.env
+
+# Media Files (Important!)
+musicFiles/
+output/
+uploads/
+
+# OS-specific
+.DS_Store
