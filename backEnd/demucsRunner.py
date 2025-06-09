@@ -1,16 +1,6 @@
 import torch
 from demucs.api import Separator, save_audio
 import os
-from celery import Celery
-
-# --- Celery Configuration ---
-# Initialize Celery, pointing to Redis as the message broker.
-# The broker URL specifies Redis running on localhost at the default port.
-celery_app = Celery(
-    'tasks',
-    broker='redis://localhost:6379/0',
-    backend='redis://localhost:6379/0'
-)
 
 # --- Helper Functions ---
 # This function automatically selects the best available device.
@@ -28,7 +18,6 @@ def get_device():
 # --- Main Celery Task ---
 # The @celery_app.task decorator registers this function as a Celery task.
 # This is the function that will run in the background on the worker.
-@celery_app.task
 def runSeparation(audio_file_path):
     try:
         separator = Separator(
