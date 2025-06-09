@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory, url_for
 from flask_cors import CORS
-from demucsRunner import runSeparation, celery_app
-from celery.result import AsyncResult
+from demucsRunner import runSeparation
+from celery import Celery, Task
 import uuid
 import ytToMP3
 import os
@@ -36,11 +36,6 @@ def generate_stems():
 
     task = runSeparation(filePath)
 
-    return jsonify({
-        'message': 'Audio file is now being processed',        
-        'task_id': task.id,
-        'status_url': url_for('task_status', task_id=task.id, _external=True)
-    })
     print(filePath)
     result = {
         'message': "What is guddy gang"
@@ -49,34 +44,6 @@ def generate_stems():
     return jsonify(result)
     #you need to take in the value, run it through spleeter
     #return the audios back to the top
-    
-@app.route('/status/<task_id>')
-def task_status(task_id):
-    """
-    Endpoint for the frontend to poll to check the status of a task.
-    """
-    task = AsyncResult(task_id, app=celery_app)
-    
-    if task.state == 'PENDING':
-        # Job is waiting in the queue or is currently being processed
-        response = {'state': task.state, 'status': 'Processing...'}
-    elif task.state != 'FAILURE':
-        # Job completed successfully
-        response = {'state': task.state, 'status': task.info.get('status', ''), 'result': task.info.get('result', {})}
-    else:
-        # Something went wrong in the background job
-        response = {'state': task.state, 'status': 'FAILURE', 'error': str(task.info)}
-        
-    return jsonify(response)
-
-
-@app.route('/output/<path:path>')
-def send_output_file(path):
-    """
-    Serves the final separated audio files.
-    """
-    return send_from_directory(app.config['OUTPUT_FOLDER'], path)
-
 if __name__ == "__main__":
     app.run(debug=True, port=8080)
 
