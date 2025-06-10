@@ -20,24 +20,13 @@ def generate_stems():
     
     data = request.get_json()
     url1 = data.get('url1')
-    print(url1)
     filePath = ytToMP3.returnMP3File(url1)
-
     task = runSeparation.delay(filePath)
-    result = {
-        'message': "What is guddy gang"
-    }
-
     # return jsonify(result)
     return {
         "task_id": task.id,
         "status_url": url_for("check_status", task_id=task.id, _external=True),
     }, 202
-    # return jsonify({
-    #     "message": "ML Task has been submitted and is running in the background.",
-    #     "task_id": task.id,
-    #     "status_url": url_for('task_status', task_id=task.id)
-    # }), 202 # 202 Accepted
 
 @app.get("/API/output/<song>/<stem>.wav")
 def get_stem(song, stem):
