@@ -1,7 +1,13 @@
 import torch
 from demucs.api import Separator, save_audio
 import os
+from celery_config import celery_app
+from pathlib import Path
+import subprocess
 
+
+# STEMS_DIR = Path(__file__).parent / "output"
+# STEMS_DIR.mkdir(parents=True, exist_ok=True) 
 def get_device():
     if torch.cuda.is_available():
         print("CUDA (NVIDIA GPU) is available. Using CUDA.")
@@ -13,7 +19,10 @@ def get_device():
         print("No GPU acceleration available. Using CPU.")
         return "cpu"
 
-def runSeparation(audio_file_path):
+
+@celery_app.task(name = "demucs.runSeparation", bind = True)
+def runSeparation(self, audio_file_path):
+    print("BEGAN SEPARATION")
     try:
         separator = Separator(
             model='htdemucs',
