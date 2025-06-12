@@ -1,82 +1,104 @@
-// src/hooks/useToneMixer.ts
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as Tone from "tone";
 
 export type StemMap = Record<string, string>;
 
-export function useToneMixer(
-  stems: StemMap | null,
-  backend: string,
-  baselineDb = -6
-) {
-  const playersRef = useRef<Tone.Players | null>(null);
-  const volsRef    = useRef<Record<string, Tone.Volume>>({});
-  const startedRef = useRef(false);  
-  const [ready, setReady]       = useState(false);
-  const [isPlaying, setPlaying] = useState(false);
+/* helper: 0‒100 % ➜ dB, 0 % = mute */
+const pctToDb = (pct: number) =>
+  pct === 0 ? -Infinity : 20 * Math.log10(pct / 100);
 
-  /* ───────────────── build players when stems arrive ───────────────── */
+const BASELINE_PCT = 75;             // slider start point
+const BASELINE_DB  = pctToDb(BASELINE_PCT);
+
+export function useToneMixer(stems: StemMap | null, backend: string) {
+  const playersRef  = useRef<Tone.Players | null>(null);
+  const volsRef     = useRef<Record<string, Tone.Volume>>({});
+  const masterRef   = useRef<Tone.Gain | null>(null);
+  const startedOnce = useRef(false);
+
+  const [ready,      setReady]   = useState(false);
+  const [isPlaying,  setPlaying] = useState(false);
+
+  /* ───────── build players when we get new stems ───────── */
   useEffect(() => {
-    if (!stems) return;               // nothing yet
+    if (!stems) return;
 
-    /* dispose any previous players */
+    /* dispose any previous graph */
     playersRef.current?.dispose();
+    masterRef.current?.dispose();
+    startedOnce.current = false;
     setReady(false);
     setPlaying(false);
 
-    /* 1 – absolute URL map (Tone needs full paths) */
+    /* absolute URLs for Tone */
     const urlMap = Object.fromEntries(
       Object.entries(stems).map(([k, rel]) => [k, `${backend}${encodeURI(rel)}`])
     );
 
-    /* 2 – create Players with correct signature */
-    const players = new Tone.Players(
-      urlMap,
-      () => {                         // ← fires after *every* stem is loaded
-        /* per-stem volumes – now the names definitely exist */
-        const vols: Record<string, Tone.Volume> = {};
-        for (const stem of Object.keys(urlMap)) {
-          const vol = new Tone.Volume(baselineDb).toDestination();
-          players.player(stem).connect(vol);
-          vols[stem] = vol;
-        }
-        volsRef.current = vols;
-        setReady(true);               // UI can render controls
-      }
-    ).toDestination();
+    /* master gain (one point into speakers) */
+    const master = new Tone.Gain().toDestination();
+    masterRef.current = master;
+
+    /* Create Players WITHOUT routing to speakers */
+    const players = new Tone.Players(urlMap, () => {
+      /* build per-stem Volume faders once all buffers loaded */
+      const vols: Record<string, Tone.Volume> = {};
+      Object.keys(urlMap).forEach((stem) => {
+        const vol = new Tone.Volume(BASELINE_DB);
+        players.player(stem).connect(vol);
+        vol.connect(master);
+        vols[stem] = vol;
+      });
+      volsRef.current = vols;
+      setReady(true);
+    });
     playersRef.current = players;
 
     return () => {
       players.dispose();
+      master.dispose();
       Tone.Transport.cancel();
     };
-  }, [stems, backend, baselineDb]);
+  }, [stems, backend]);
 
-  /* ───────────────── playback helpers ───────────────── */
+  /* ───────── controls ───────── */
   const playAll = useCallback(async () => {
     if (!ready || !playersRef.current) return;
-    await Tone.start();                       // unlock AudioContext
-   if (!startedRef.current) {                   // ← run only the first time
-     Object.keys(stems!).forEach((name) =>
-       playersRef.current!.player(name).sync().start(0)
-     );
-     startedRef.current = true;
-   }
+    await Tone.start();                      // unlock iOS / Chrome
+    if (!startedOnce.current) {
+      Object.keys(stems!).forEach((s) =>
+        playersRef.current!.player(s).sync().start(0)
+      );
+      startedOnce.current = true;
+    }
     Tone.Transport.start();
     setPlaying(true);
   }, [ready, stems]);
 
-  const pauseAll   = () => { Tone.Transport.pause(); setPlaying(false); };
-  const jump       = (sec: number) =>
+  const pauseAll = () => { Tone.Transport.pause(); setPlaying(false); };
+
+  const jump     = (sec: number) =>
     (Tone.Transport.seconds = Math.max(Tone.Transport.seconds + sec, 0));
-  const setVolume  = (stem: string, db: number) =>
-    volsRef.current[stem]?.volume.rampTo(db, 0.05);
-  const resetVolumes = () =>
-    Object.values(volsRef.current).forEach((v) =>
-      v.volume.rampTo(baselineDb, 0.05)
-    );
+
+  const setVolumePct = (stem: string, pct: number) => {
+    const vol = volsRef.current[stem];
+    if (!vol) return;
+    if (pct === 0) {
+      vol.mute = true;
+    } else {
+      vol.mute = false;
+      vol.volume.linearRampTo(pctToDb(pct), 0.1);
+    }
+  };
+
+  const resetVolumes = () => {
+    Object.values(volsRef.current).forEach((v) => {
+      v.mute = false;
+      v.volume.linearRampTo(BASELINE_DB, 0.1);
+    });
+  };
 
   return ready
-    ? { isPlaying, playAll, pauseAll, jump, setVolume, resetVolumes }
+    ? { isPlaying, playAll, pauseAll, jump, setVolumePct, resetVolumes, BASELINE_PCT }
     : null;
 }

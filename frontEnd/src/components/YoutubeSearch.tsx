@@ -1,4 +1,3 @@
-// src/components/YouTubeSearch.tsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import StemPlayer from "./StemPlayer";
@@ -36,6 +35,8 @@ const YouTubeSearch: React.FC = () => {
         },
       });
       setVideoId(data.items?.[0]?.id?.videoId || "");
+      setStems(null); // reset previous stems when searching anew
+      setStatus("idle");
     } catch (err) {
       console.error("YouTube API error:", err);
     } finally {
@@ -50,6 +51,7 @@ const YouTubeSearch: React.FC = () => {
     if (!videoId) return;
     try {
       setStatus("running");
+      setStems(null); // clear any prior stems until new job finishes
       const { data } = await axios.post(`${BACKEND}/API/generate`, {
         url1: `https://www.youtube.com/watch?v=${videoId}`,
       });
@@ -82,9 +84,7 @@ const YouTubeSearch: React.FC = () => {
     return () => clearInterval(timer);
   }, [taskId]);
 
-  /* ─────────── UI ─────────── */
-  if (stems) return <StemPlayer stems={stems} />;
-
+  /* ─────────── render ─────────── */
   return (
     <div className="wrapper">
       {/* search row */}
@@ -120,6 +120,13 @@ const YouTubeSearch: React.FC = () => {
         <p className="status-text">Separating… please wait</p>
       )}
       {status === "error" && <p className="error-msg">Something went wrong.</p>}
+
+      {/* ─────────── NEW: keep the player visible alongside UI ─────────── */}
+      {stems && (
+        <div style={{ marginTop: 40 }}>
+          <StemPlayer stems={stems} />
+        </div>
+      )}
     </div>
   );
 };
