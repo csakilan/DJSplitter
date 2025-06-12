@@ -1,75 +1,44 @@
-import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import React from "react";
+import { useToneMixer, StemMap } from "../hooks/useToneMixer";
 import "./StemPlayer.css";
 
 const BACKEND = "http://127.0.0.1:8080";
 
-interface StemMap {
-  [stem: string]: string;
-}
 interface Props {
-  taskId: string;
+  stems: StemMap;
 }
 
-const StemPlayer: React.FC<Props> = ({ taskId }) => {
-  const [status, setStatus] = useState<"pending" | "ready" | "error">(
-    "pending"
-  );
-  const [stems, setStems] = useState<StemMap | null>(null);
-  const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
-  const [playing, setPlaying] = useState(false);
+const StemPlayer: React.FC<Props> = ({ stems }) => {
+  const mixer = useToneMixer(stems, BACKEND, -6);
 
-  /* ─ Poll /status/<id> until SUCCESS ─ */
-  useEffect(() => {
-    const timer = setInterval(async () => {
-      try {
-        const { data } = await axios.get(`${BACKEND}/status/${taskId}`);
-        if (data.state === "SUCCESS") {
-          clearInterval(timer);
-          setStems(data.stems ?? data.result); // accept either key
-          setStatus("ready");
-        } else if (data.state === "FAILURE") {
-          clearInterval(timer);
-          setStatus("error");
-        }
-      } catch {
-        clearInterval(timer);
-        setStatus("error");
-      }
-    }, 2000);
-    return () => clearInterval(timer);
-  }, [taskId]);
-
-  /* ─ Master controls ─ */
-  const playAll = () => {
-    Promise.all(Object.values(audioRefs.current).map((a) => a.play())).then(
-      () => setPlaying(true)
-    );
-  };
-  const pauseAll = () => {
-    Object.values(audioRefs.current).forEach((a) => a.pause());
-    setPlaying(false);
-  };
-
-  /* ─ UI ─ */
-  if (status === "pending")
-    return <p className="status-text">Loading stems…</p>;
-  if (status === "error")
-    return <p style={{ color: "red" }}>Error loading stems.</p>;
+  if (!mixer) return <p className="status-text">Loading stems…</p>;
 
   return (
     <div className="stem-wrapper">
-      <button className="master-btn" onClick={playing ? pauseAll : playAll}>
-        {playing ? "Pause All" : "Play All"}
-      </button>
-
-      {Object.entries(stems!).map(([name, relUrl]) => (
-        <div key={name} className="stem-block">
-          <strong>{name.toUpperCase()}</strong>
-          <br />
-          <audio controls src={`${BACKEND}${encodeURI(relUrl)}`} />
+      <button
+        className="master-btn"
+        onClick={mixer.isPlaying ? mixer.pauseAll : mixer.playAll}
+      >
+        {mixer.isPlaying ? "Pause All" : "Play All"}
+      </button>{" "}
+      <button onClick={() => mixer.jump(-10)}>–10 s</button>{" "}
+      <button onClick={() => mixer.jump(+10)}>+10 s</button>
+      <hr style={{ margin: "24px 0", opacity: 0.15 }} />
+      {Object.keys(stems).map((stem) => (
+        <div key={stem} className="stem-block">
+          <strong>{stem.toUpperCase()}</strong>
+          <input
+            type="range"
+            min={-48}
+            max={6}
+            defaultValue={-6}
+            onChange={(e) => mixer.setVolume(stem, +e.target.value)}
+          />
         </div>
       ))}
+      <button style={{ marginTop: 20 }} onClick={mixer.resetVolumes}>
+        Reset Volumes
+      </button>
     </div>
   );
 };
