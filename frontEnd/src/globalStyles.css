@@ -1,0 +1,8 @@
+/* DarkPage.css  – applies to the whole document */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: #000;
+  color: #eee;
+  font-family: system-ui, sans-serif;
+}

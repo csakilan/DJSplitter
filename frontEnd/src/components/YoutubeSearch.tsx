@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import StemPlayer from "./StemPlayer";
+import "./YoutubeSearch.css";
 
 const YT_API_KEY = "AIzaSyAHBjl1GVP7FOdP_ukHnKIyaWcr8iu51IY";
 const YT_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
@@ -15,8 +17,8 @@ const YouTubeSearch: React.FC = () => {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">(
     "idle"
   );
-  const [stems, setStems] = useState<Record<string, string> | null>(null);
-  const pollRef = useRef<number | null>(null); // <─ CHANGED
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const pollRef = useRef<number | null>(null);
 
   // ───── YouTube search ─────
   const handleSearch = async () => {
@@ -51,56 +53,37 @@ const YouTubeSearch: React.FC = () => {
       const { data } = await axios.post(`${BACKEND}/API/generate`, {
         url1: `https://www.youtube.com/watch?v=${videoId}`,
       });
-      // poll every 3 s
-      pollRef.current = window.setInterval(async () => {
-        try {
-          const res = await axios.get(`${BACKEND}/status/${data.task_id}`);
-          if (res.data.state === "SUCCESS") {
-            clearInterval(pollRef.current!);
-            setStatus("done");
-            setStems(res.data.result);
-          } else if (res.data.state === "FAILURE") {
-            clearInterval(pollRef.current!);
-            setStatus("error");
-          }
-        } catch {
-          clearInterval(pollRef.current!);
-          setStatus("error");
-        }
-      }, 3000);
+      setTaskId(data.task_id); // ← save taskId for StemPlayer
+      setStatus("done"); // indicate we have a task
     } catch (err) {
       console.error("Backend error:", err);
       setStatus("error");
     }
   };
 
+  // cleanup (optional, since StemPlayer does its own polling)
   useEffect(() => {
     return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-      }
+      if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
 
   // ───── UI ─────
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto", textAlign: "center" }}>
+    <div className="wrapper">
       {/* search */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+      <div className="search-row">
         <input
-          style={{ flex: 1, padding: 10 }}
           placeholder="Search for a song…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
         />
-        <button onClick={handleSearch} style={{ padding: "10px 16px" }}>
-          SEARCH
-        </button>
+        <button onClick={handleSearch}>SEARCH</button>
       </div>
-      {searching && <p>Searching…</p>}
+      {searching && <p className="status-text">Searching…</p>}
       {videoId && !searching && (
-        <div style={{ marginBottom: 20 }}>
+        <div className="preview">
           <iframe
             title="preview"
             width="100%"
@@ -109,35 +92,16 @@ const YouTubeSearch: React.FC = () => {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
-          <button
-            onClick={handleGenerate}
-            style={{ marginTop: 12, padding: "10px 16px" }}
-          >
+          <button onClick={handleGenerate} className="generate-btn">
             GENERATE STEMS
           </button>
         </div>
       )}
-      {status === "running" && <p>Separating… please wait</p>}
-      {status === "error" && (
-        <p style={{ color: "red" }}>Something went wrong.</p>
-      )}
-      {status === "done" && stems && (
-        <ul style={{ listStyle: "none", padding: 0, marginTop: 20 }}>
-          {Object.entries(stems).map(([stem, path]) => (
-            <li key={stem} style={{ margin: "8px 0" }}>
-              {stem}:{" "}
-              <a
-                href={`${BACKEND}${path}`}
-                download
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Download
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
+      {status === "running" && <p className="status-text">Loading Song</p>}
+      {status === "error" && <p className="error-msg">Something went wrong.</p>}
+
+      {/* once we have a taskId, hand off to StemPlayer to do the polling & rendering */}
+      {taskId && status === "done" && <StemPlayer taskId={taskId} />}
     </div>
   );
 };

@@ -1,0 +1,40 @@
+/* outer wrapper */
+.stem-wrapper {
+  background: #111;
+  color: #eee;
+  padding: 24px;
+  text-align: center;        /* center everything by default */
+}
+
+/* master play / pause button */
+.master-btn {
+  display: inline-block;     /* respect auto margins */
+  margin: 0 auto 28px;       /* centered + extra space below */
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #444;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.master-btn:hover {
+  background: #555;
+}
+
+/* individual stem block */
+.stem-block {
+  margin: 36px 0;            /* larger vertical spacing */
+  text-align: center;
+}
+
+.stem-block strong {
+  display: block;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.stem-block audio {
+  width: 100%;                /* keeps player narrower than full page */
+  max-width: 500px;
+}
