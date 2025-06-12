@@ -1,0 +1,85 @@
+/* Page wrapper – dark theme */
+.wrapper {
+  min-height: 100vh;
+  color: #eee;
+  font-family: system-ui, sans-serif;
+  padding: 24px;
+}
+
+/* ───────────────────────── search row ───────────────────────── */
+.search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.search-row input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #222;
+  color: #eee;
+}
+
+.search-row button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #444;
+  color: #fff;
+  cursor: pointer;
+}
+
+.search-row button:hover {
+  background: #555;
+}
+
+/* ──────────────────────── YouTube preview ───────────────────── */
+.preview {
+  margin-bottom: 24px;
+  text-align: center;             /* center iframe + button */
+}
+
+.preview iframe {
+  display: block;                 /* enable margin auto centering */
+  margin: 0 auto;
+  border: none;
+  border-radius: 12px;            /* rounded corners */
+}
+
+/* ───────────────────────── generate button ──────────────────── */
+.generate-btn {
+  margin: 12px auto 0;            /* centered below iframe */
+  display: inline-block;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #444;
+  color: #fff;
+  cursor: pointer;
+}
+
+.generate-btn:hover {
+  background: #555;
+}
+
+/* ───────────────────────── status & errors ──────────────────── */
+.status-text {
+  text-align: center;
+}
+
+.error-msg {
+  color: #ff6161;
+}
+
+/* ───────────────────────── stem list (optional) ─────────────── */
+.stem-list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+.stem-list li {
+  margin: 8px 0;
+}

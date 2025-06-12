@@ -1,7 +1,7 @@
 // import { useState } from "react";
 // import SearchBar from "./components/searchBar";
 import YouTubeSearch from "./components/YoutubeSearch";
-import './App.css'; // Import the CSS file
+import "./App.css"; // Import the CSS file
 
 function App() {
   // const [count, setCount] = useState(0);

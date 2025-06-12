@@ -1,51 +1,50 @@
-import torch
-from demucs.api import Separator, save_audio
-import os
-from celery_config import celery_app
+import torch, subprocess, os, shlex
 from pathlib import Path
-import subprocess
+from demucs.api import Separator, save_audio
+from celery_config import celery_app
 
-
-# STEMS_DIR = Path(__file__).parent / "output"
-# STEMS_DIR.mkdir(parents=True, exist_ok=True) 
-def get_device():
+def get_device() -> str:
     if torch.cuda.is_available():
-        print("CUDA (NVIDIA GPU) is available. Using CUDA.")
         return "cuda"
-    elif torch.backends.mps.is_available():
-        print("MPS (Apple Silicon GPU) is available. Using MPS.")
+    if torch.backends.mps.is_available():
         return "mps"
-    else:
-        print("No GPU acceleration available. Using CPU.")
-        return "cpu"
+    return "cpu"
 
-
-@celery_app.task(name = "demucs.runSeparation", bind = True)
-def runSeparation(self, audio_file_path):
-    print("BEGAN SEPARATION")
+@celery_app.task(name="demucs.runSeparation", bind=True)
+def runSeparation(self, audio_file_path: str):
     try:
-        separator = Separator(
-            model='htdemucs',
-            device=get_device(),
-            progress=True
-        )
+        print("BEGAN SEPARATION:", audio_file_path)
+        separator = Separator(model="htdemucs", device=get_device(), progress=True)
 
-        print(f"Worker processing: {audio_file_path}")
-        original_wav, separated_stems = separator.separate_audio_file(audio_file_path)
+        _, stems = separator.separate_audio_file(audio_file_path)
 
-        fileName = os.path.basename(audio_file_path)
-        song_name_without_extension = os.path.splitext(fileName)[0]
-        output_dir = os.path.join("output", song_name_without_extension)
-        os.makedirs(output_dir, exist_ok=True)
+        song_name = Path(audio_file_path).stem
+        out_dir   = Path("output") / song_name
+        out_dir.mkdir(parents=True, exist_ok=True)
 
-        output_paths = {}
-        for stem_name, stem_wav in separated_stems.items():
-            save_path = os.path.join(output_dir, f"{stem_name}.wav")
-            save_audio(stem_wav, save_path, separator.samplerate)
-            output_paths[stem_name] = f"/output/{song_name_without_extension}/{stem_name}.wav"
-        
-        print(f"Worker finished processing: {audio_file_path}")
-        return {'status': 'SUCCESS', 'result': output_paths}
+        url_map: dict[str, str] = {}
+
+        for stem, wav in stems.items():
+            wav_path = out_dir / f"{stem}.wav"
+            mp3_path = out_dir / f"{stem}.mp3"
+
+            save_audio(wav, wav_path, separator.samplerate)
+
+            # --- ffmpeg transcode -------------------------------------------------
+            cmd = ["ffmpeg", "-y", "-i", str(wav_path), str(mp3_path)]
+            ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE).returncode
+
+            if ret == 0 and mp3_path.exists():
+                url_map[stem] = f"/API/output/{song_name}/{stem}.mp3"
+            else:
+                # Keep the WAV if MP3 failed
+                print(f"[ffmpeg ERROR] Could not create {mp3_path.name}; keeping WAV")
+                url_map[stem] = f"/API/output/{song_name}/{stem}.wav"
+
+        print("FINISHED SEPARATION:", audio_file_path)
+        return {"status": "SUCCESS", "result": url_map}
+
 
     except Exception as e:
-        return {'status': 'FAILURE', 'error': str(e)}
+        print("SEPARATION FAILED:", e)
+        return {"status": "FAILURE", "error": str(e)}
