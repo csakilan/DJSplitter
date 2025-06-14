@@ -1,5 +1,6 @@
 import React, { useEffect, useReducer, useRef } from "react";
 import { useToneMixer, StemMap, BASELINE_PCT } from "../hooks/useToneMixer";
+import { useMixerRegistry } from "../context/MixerContext";
 
 /* icon set */
 import { Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
@@ -35,7 +36,12 @@ const StemPlayer: React.FC<Props> = ({ stems }) => {
     valsRef.current = buildMap(Object.keys(stems), baseline);
     forceRender();
   }, [stems, mixer?.BASELINE_PCT]);
-
+  const { register, unregister } = useMixerRegistry();
+  useEffect(() => {
+    if (!mixer) return;
+    register(mixer);
+    return () => unregister(mixer);
+  }, [mixer, register, unregister]);
   /* handlers */
   const handleSlide =
     (stem: string) => (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -1,20 +1,18 @@
-// import { useState } from "react";
-// import SearchBar from "./components/searchBar";
+// src/App.tsx
 import YouTubeSearch from "./components/YoutubeSearch";
-import "./App.css"; // Import the CSS file
+import MasterController from "./components/MasterController";
+import { MixerProvider } from "./context/MixerContext";
+import "./App.css";
 
 function App() {
-  // const [count, setCount] = useState(0);
-
   return (
-    <>
+    <MixerProvider>
       <div className="search-container">
         <YouTubeSearch />
+        <MasterController />
         <YouTubeSearch />
-        {/* <SearchBar placeHolder="Enter Song 1" id="songOne" />
-        <SearchBar placeHolder="Enter Song 2" id="songTwo" /> */}
       </div>
-    </>
+    </MixerProvider>
   );
 }
 

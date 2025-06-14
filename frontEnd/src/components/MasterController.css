@@ -1,0 +1,37 @@
+.master-bar {
+  flex: 1; /* fills horizontal gap between the two YouTubeSearch wrappers */
+  height: 40px;
+  margin-top: 24px; /* aligns with the search row in .wrapper */
+  background: #1b1b1b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px; /* rounded corners */
+}
+
+.button-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.master-bar .jump-btn,
+.master-bar .master-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+.master-bar .master-btn {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px; /* now matching the parent's height */
+}
+
+.master-btn{
+    padding-top: 35px
+}
