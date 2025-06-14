@@ -85,3 +85,25 @@
   background: #c63c3c;
   transform: translateY(-1px);
 }
+/* StemPlayer.css additions */
+.stem-block input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 160px;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    #999 0%,
+    #999 50%,
+    #f60 50%,
+    #f60 100%
+  );
+}
+.stem-block input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #fff; border: 1px solid #666;
+  cursor: pointer;
+}
