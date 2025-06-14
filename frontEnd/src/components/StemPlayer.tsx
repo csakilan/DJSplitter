@@ -1,5 +1,6 @@
 import React, { useEffect, useReducer, useRef } from "react";
-import { useToneMixer, StemMap } from "../hooks/useToneMixer";
+import { useToneMixer, StemMap, BASELINE_PCT } from "../hooks/useToneMixer";
+import { useMixerRegistry } from "../context/MixerContext";
 
 /* icon set */
 import { Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
@@ -15,7 +16,7 @@ interface Props {
 const buildMap = (keys: string[], pct: number) =>
   Object.fromEntries(keys.map((k) => [k, pct]));
 
-const DEFAULT_PCT = 75;
+const DEFAULT_PCT = BASELINE_PCT;
 
 const StemPlayer: React.FC<Props> = ({ stems }) => {
   /* Tone.js */
@@ -35,7 +36,12 @@ const StemPlayer: React.FC<Props> = ({ stems }) => {
     valsRef.current = buildMap(Object.keys(stems), baseline);
     forceRender();
   }, [stems, mixer?.BASELINE_PCT]);
-
+  const { register, unregister } = useMixerRegistry();
+  useEffect(() => {
+    if (!mixer) return;
+    register(mixer);
+    return () => unregister(mixer);
+  }, [mixer, register, unregister]);
   /* handlers */
   const handleSlide =
     (stem: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,6 +105,9 @@ const StemPlayer: React.FC<Props> = ({ stems }) => {
                 min={0}
                 max={100}
                 value={valsRef.current[stem]}
+                style={
+                  { "--val": valsRef.current[stem] } as React.CSSProperties
+                }
                 onChange={handleSlide(stem)}
               />
             </div>

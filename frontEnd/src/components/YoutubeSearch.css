@@ -4,6 +4,7 @@
   color: #eee;
   font-family: system-ui, sans-serif;
   padding: 24px;
+  flex: 0 0 300px; /* fixed width – adjust as needed */
 }
 
 /* ───────────────────────── search row ───────────────────────── */
