@@ -1,4 +1,3 @@
-// src/components/YouTubeSearch.tsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import StemPlayer from "./StemPlayer";
@@ -11,19 +10,25 @@ const BACKEND = "http://127.0.0.1:8080";
 type StemMap = Record<string, string>;
 
 const YouTubeSearch: React.FC = () => {
-  /* ────────── search state ────────── */
+  /* search */
   const [query, setQuery] = useState("");
   const [videoId, setVideoId] = useState("");
   const [searching, setSearching] = useState(false);
 
-  /* ────────── separation state ────────── */
+  /* separation */
   const [taskId, setTaskId] = useState<string | null>(null);
   const [stems, setStems] = useState<StemMap | null>(null);
   const [status, setStatus] = useState<"idle" | "running" | "error">("idle");
+  const [lastGenerated, setLastGenerated] = useState<string | null>(null);
 
-  /* remembers which videoId has already been separated */
-  const [lastGeneratedId, setLastGeneratedId] = useState<string | null>(null);
+  /* analysis meta */
+  const [meta, setMeta] = useState<{
+    key: string;
+    tonic: number;
+    tempo: number;
+  } | null>(null);
 
+  /* ── handle search ── */
   const handleSearch = async () => {
     if (!query.trim()) return;
     setSearching(true);
@@ -39,15 +44,7 @@ const YouTubeSearch: React.FC = () => {
       });
       const newId = data.items?.[0]?.id?.videoId || "";
       setVideoId(newId);
-
-      /* ↓↓↓ REMOVE this block so the current StemPlayer stays visible ↓↓↓ */
-      // if (newId !== lastGeneratedId) {
-      //   setStems(null);
-      //   setStatus("idle");
-      // }
-
-      /* instead, just reset status for fresh UI messages */
-      if (newId !== lastGeneratedId) {
+      if (newId !== lastGenerated) {
         setStatus("idle");
       }
     } catch (err) {
@@ -56,28 +53,28 @@ const YouTubeSearch: React.FC = () => {
       setSearching(false);
     }
   };
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) =>
     e.key === "Enter" && handleSearch();
 
-  /* ────────── generate stems ────────── */
-  const handleGenerate = async () => {
+  /* ── generate stems ── */
+  const generate = async () => {
     if (!videoId) return;
     try {
       setStatus("running");
       setStems(null);
+      setMeta(null);
       const { data } = await axios.post(`${BACKEND}/API/generate`, {
         url1: `https://www.youtube.com/watch?v=${videoId}`,
       });
       setTaskId(data.task_id);
-      setLastGeneratedId(videoId); // record that this video is now processing
+      setLastGenerated(videoId);
     } catch (err) {
       console.error("Backend error:", err);
       setStatus("error");
     }
   };
 
-  /* ────────── poll /status/<id> ────────── */
+  /* ── poll task status ── */
   useEffect(() => {
     if (!taskId) return;
     const timer = window.setInterval(async () => {
@@ -86,6 +83,13 @@ const YouTubeSearch: React.FC = () => {
         if (data.state === "SUCCESS") {
           clearInterval(timer);
           setStems(data.stems ?? data.result);
+
+          /* fetch pitch/tempo */
+          const metaRes = await axios.post(`${BACKEND}/API/pitch`, {
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+          });
+          setMeta(metaRes.data);
+
           setStatus("idle");
         } else if (data.state === "FAILURE") {
           throw new Error(data.error || "Separation failed");
@@ -97,9 +101,9 @@ const YouTubeSearch: React.FC = () => {
       }
     }, 2000);
     return () => clearInterval(timer);
-  }, [taskId]);
+  }, [taskId, videoId]);
 
-  /* ────────── render ────────── */
+  /* ── render ── */
   return (
     <div className="wrapper">
       {/* search row */}
@@ -126,9 +130,9 @@ const YouTubeSearch: React.FC = () => {
             allowFullScreen
           />
 
-          {/* show button only if this video hasn't been separated yet */}
-          {videoId !== lastGeneratedId && status !== "running" && (
-            <button onClick={handleGenerate} className="generate-btn">
+          {/* generate button only if not already processed */}
+          {videoId !== lastGenerated && status !== "running" && (
+            <button onClick={generate} className="generate-btn">
               GENERATE STEMS
             </button>
           )}
@@ -140,9 +144,9 @@ const YouTubeSearch: React.FC = () => {
       )}
       {status === "error" && <p className="error-msg">Something went wrong.</p>}
 
-      {stems && (
+      {stems && meta && (
         <div style={{ marginTop: 40 }}>
-          <StemPlayer stems={stems} />
+          <StemPlayer stems={stems} meta={meta} />
         </div>
       )}
     </div>

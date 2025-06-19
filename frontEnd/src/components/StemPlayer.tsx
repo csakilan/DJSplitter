@@ -2,7 +2,7 @@ import React, { useEffect, useReducer, useRef } from "react";
 import { useToneMixer, StemMap, BASELINE_PCT } from "../hooks/useToneMixer";
 import { useMixerRegistry } from "../context/MixerContext";
 
-/* icon set */
+/* lucide icons */
 import { Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
 
 import "./StemPlayer.css";
@@ -11,51 +11,59 @@ const BACKEND = "http://127.0.0.1:8080";
 
 interface Props {
   stems: StemMap;
+  meta: {
+    key: string; // e.g. "G#m"
+    tonic: number; // 0-11
+    tempo: number; // BPM
+  };
 }
 
 const buildMap = (keys: string[], pct: number) =>
   Object.fromEntries(keys.map((k) => [k, pct]));
 
-const DEFAULT_PCT = BASELINE_PCT;
+const DEFAULT_PCT = BASELINE_PCT; // ← constant is already exported
 
-const StemPlayer: React.FC<Props> = ({ stems }) => {
-  /* Tone.js */
+const StemPlayer: React.FC<Props> = ({ stems, meta }) => {
   const mixer = useToneMixer(stems, BACKEND);
 
-  /* per-stem slider values in a ref */
-  const valsRef = useRef<Record<string, number>>(
-    buildMap(Object.keys(stems), DEFAULT_PCT)
-  );
-
-  /* force repaint helper */
-  const [, forceRender] = useReducer((x) => x + 1, 0);
-
-  /* reset ref when stems / baseline change */
-  useEffect(() => {
-    const baseline = mixer ? mixer.BASELINE_PCT : DEFAULT_PCT;
-    valsRef.current = buildMap(Object.keys(stems), baseline);
-    forceRender();
-  }, [stems, mixer?.BASELINE_PCT]);
+  /* register with global registry */
   const { register, unregister } = useMixerRegistry();
   useEffect(() => {
     if (!mixer) return;
-    register(mixer);
-    return () => unregister(mixer);
-  }, [mixer, register, unregister]);
-  /* handlers */
-  const handleSlide =
-    (stem: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      const pct = +e.currentTarget.value;
-      valsRef.current[stem] = pct;
-      mixer?.setVolumePct(stem, pct);
-      forceRender();
+    const handle = {
+      ...mixer,
+      tonic: meta.tonic,
+      tempo: meta.tempo,
     };
+    register(handle);
+    return () => unregister(handle);
+  }, [mixer, meta.tonic, meta.tempo, register, unregister]);
 
-  const handleReset = () => {
+  /* per-stem slider values */
+  const valsRef = useRef<Record<string, number>>(
+    buildMap(Object.keys(stems), DEFAULT_PCT)
+  );
+  const [, forceRender] = useReducer((x) => x + 1, 0);
+
+  /* reset sliders when stems reload */
+  useEffect(() => {
+    const baseline = BASELINE_PCT; // ← use constant, not mixer field
+    valsRef.current = buildMap(Object.keys(stems), baseline);
+    forceRender();
+  }, [stems]);
+
+  /* handlers */
+  const slide = (stem: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pct = +e.currentTarget.value;
+    valsRef.current[stem] = pct;
+    mixer?.setVolumePct(stem, pct);
+    forceRender();
+  };
+
+  const reset = () => {
     mixer?.resetVolumes();
-    const baseline = mixer ? mixer.BASELINE_PCT : DEFAULT_PCT;
     Object.keys(valsRef.current).forEach(
-      (k) => (valsRef.current[k] = baseline)
+      (k) => (valsRef.current[k] = BASELINE_PCT) // ← same fix here
     );
     forceRender();
   };
@@ -67,12 +75,12 @@ const StemPlayer: React.FC<Props> = ({ stems }) => {
         <p className="status-text">Loading stems…</p>
       ) : (
         <>
-          {/* transport controls */}
+          {/* transport */}
           <div className="control-row">
             <button
               className="jump-btn"
               onClick={() => mixer.jump(-10)}
-              aria-label="Back 10 seconds"
+              aria-label="Back 10s"
             >
               <ChevronLeft size={20} />
             </button>
@@ -88,7 +96,7 @@ const StemPlayer: React.FC<Props> = ({ stems }) => {
             <button
               className="jump-btn"
               onClick={() => mixer.jump(10)}
-              aria-label="Forward 10 seconds"
+              aria-label="Fwd 10s"
             >
               <ChevronRight size={20} />
             </button>
@@ -96,7 +104,7 @@ const StemPlayer: React.FC<Props> = ({ stems }) => {
 
           <hr style={{ margin: "24px 0", opacity: 0.15 }} />
 
-          {/* per-stem sliders */}
+          {/* sliders */}
           {Object.keys(stems).map((stem) => (
             <div key={stem} className="stem-block">
               <strong>{stem.toUpperCase()}</strong>
@@ -105,17 +113,19 @@ const StemPlayer: React.FC<Props> = ({ stems }) => {
                 min={0}
                 max={100}
                 value={valsRef.current[stem]}
-                style={
-                  { "--val": valsRef.current[stem] } as React.CSSProperties
-                }
-                onChange={handleSlide(stem)}
+                onChange={slide(stem)}
               />
             </div>
           ))}
 
-          <button className="reset-btn" onClick={handleReset}>
+          <button className="reset-btn" onClick={reset}>
             Reset Volumes
           </button>
+
+          {/* song info */}
+          <p style={{ marginTop: 8, fontSize: 14, color: "#555" }}>
+            Key: {meta.key}&nbsp; • &nbsp;Tempo: {Math.round(meta.tempo)} BPM
+          </p>
         </>
       )}
     </div>
