@@ -24,13 +24,45 @@ const MasterController: React.FC = () => {
     m,
   }));
   const tempoSync = (idx: number) => {
-    const target = mixers.current[idx].tempo;
-    mixers.current.forEach((m) => m.setPlaybackRate(target / m.tempo));
-  };
-  const pitchSync = (idx: number) => {
-    const tgt = mixers.current[idx].tonic;
+    const target = mixers.current[idx];
+    if (!target) return;
+
+    const targetTempo = target.tempo;
+    const targetTonic = target.tonic;
+
     mixers.current.forEach((m) => {
-      const delta = (tgt - m.tonic + 12) % 12;
+      if (!m) return;
+
+      // Compute how much to stretch to match tempo
+      const tempoRatio = targetTempo / m.tempo;
+
+      // Tempo change also changes pitch → compensate
+      const tempoInducedPitchShift = 12 * Math.log2(tempoRatio);
+
+      // Desired pitch shift based on tonic difference
+      const desiredPitchShift = (targetTonic - m.tonic + 12) % 12;
+
+      // Final pitch shift should correct for tempo change
+      const correctedPitchShift = desiredPitchShift - tempoInducedPitchShift;
+
+      m.setPlaybackRate(tempoRatio); // Change tempo (affects pitch)
+      m.setPitchShift(correctedPitchShift); // Compensate pitch to stay in tune
+    });
+  };
+
+  const pitchSync = (idx: number) => {
+    const target = mixers.current[idx];
+    if (!target) return;
+
+    const targetTonic = target.tonic;
+
+    mixers.current.forEach((m) => {
+      if (!m) return;
+
+      // Desired pitch shift (only correct when tempo is same)
+      const delta = (targetTonic - m.tonic + 12) % 12;
+
+      // Only apply pure pitch shift if playbackRate is already synced
       m.setPitchShift(delta);
     });
   };
