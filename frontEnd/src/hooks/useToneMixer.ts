@@ -38,19 +38,24 @@ export function useToneMixer(stems:StemMap|null, backend:string){
     /* create chain Player→Volume (no Pitch yet) */
     const players:Record<string,Tone.Player> = {};
     const vols   :Record<string,Tone.Volume> = {};
-    Promise.all(
-      Object.entries(stems).map(async ([stem,rel])=>{
-        const url = `${backend}${encodeURI(rel)}`;
-        const player = new Tone.Player({url,context:ctx,autostart:false});
-        const vol = new Tone.Volume({volume:BASELINE_DB,context:ctx});
-        player.connect(vol);
-        vols[stem]=vol; players[stem]=player;
-      })
-    ).then(()=>{
-      playersRef.current = players;
-      volsRef.current    = vols;
-      setReady(true);
-    });
+Promise.all(
+  Object.entries(stems).map(async ([stem, rel]) => {
+    const url = `${backend}${encodeURI(rel)}`;
+    const player = new Tone.Player({ context: ctx, autostart: false });
+    await player.load(url);  // ← ensure buffer is loaded
+
+    const vol = new Tone.Volume({ volume: BASELINE_DB, context: ctx });
+    player.connect(vol);
+
+    vols[stem] = vol;
+    players[stem] = player;
+  })
+).then(() => {
+  playersRef.current = players;
+  volsRef.current = vols;
+  setReady(true);           // ← only now we're ready to start/pause
+});
+
 
     offsetRef.current=0; setPlaying(false);
 
