@@ -10,53 +10,46 @@ const BACKEND = "http://127.0.0.1:8080";
 type StemMap = Record<string, string>;
 
 const YouTubeSearch: React.FC = () => {
-  /* search */
+  /* search UI */
   const [query, setQuery] = useState("");
   const [videoId, setVideoId] = useState("");
   const [searching, setSearching] = useState(false);
 
-  /* separation */
+  /* separation job */
   const [taskId, setTaskId] = useState<string | null>(null);
   const [stems, setStems] = useState<StemMap | null>(null);
+  const [meta, setMeta] = useState<any | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string>("");
   const [status, setStatus] = useState<"idle" | "running" | "error">("idle");
-  const [lastGenerated, setLastGenerated] = useState<string | null>(null);
 
-  /* analysis meta */
-  const [meta, setMeta] = useState<{
-    key: string;
-    tonic: number;
-    tempo: number;
-  } | null>(null);
-
-  /* ── handle search ── */
+  /* ────────── YouTube search ────────── */
   const handleSearch = async () => {
     if (!query.trim()) return;
-    setSearching(true);
     try {
+      setSearching(true);
       const { data } = await axios.get(YT_SEARCH_URL, {
         params: {
           part: "snippet",
           q: query,
-          key: YT_API_KEY,
           maxResults: 1,
+          key: YT_API_KEY,
           type: "video",
         },
       });
-      const newId = data.items?.[0]?.id?.videoId || "";
-      setVideoId(newId);
-      if (newId !== lastGenerated) {
-        setStatus("idle");
-      }
+      const item = data.items?.[0];
+      if (!item) throw new Error("No results");
+      setVideoId(item.id.videoId);
     } catch (err) {
-      console.error("YouTube API error:", err);
+      console.error(err);
     } finally {
       setSearching(false);
     }
   };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) =>
     e.key === "Enter" && handleSearch();
 
-  /* ── generate stems ── */
+  /* ────────── start separation ────────── */
   const generate = async () => {
     if (!videoId) return;
     try {
@@ -67,87 +60,84 @@ const YouTubeSearch: React.FC = () => {
         url1: `https://www.youtube.com/watch?v=${videoId}`,
       });
       setTaskId(data.task_id);
-      setLastGenerated(videoId);
+      setAudioUrl(data.original_url);
     } catch (err) {
-      console.error("Backend error:", err);
+      console.error(err);
       setStatus("error");
     }
   };
 
-  /* ── poll task status ── */
+  /* ────────── poll status ────────── */
   useEffect(() => {
     if (!taskId) return;
-    const timer = window.setInterval(async () => {
+    const t = window.setInterval(async () => {
       try {
         const { data } = await axios.get(`${BACKEND}/status/${taskId}`);
         if (data.state === "SUCCESS") {
-          clearInterval(timer);
+          window.clearInterval(t);
           setStems(data.stems ?? data.result);
-
-          /* fetch pitch/tempo */
+          setAudioUrl(data.original_url);
+          /* optional key / tempo */
           const metaRes = await axios.post(`${BACKEND}/API/pitch`, {
             url: `https://www.youtube.com/watch?v=${videoId}`,
           });
           setMeta(metaRes.data);
-
           setStatus("idle");
         } else if (data.state === "FAILURE") {
           throw new Error(data.error || "Separation failed");
         }
       } catch (err) {
-        console.error("Polling error:", err);
-        clearInterval(timer);
+        console.error(err);
+        window.clearInterval(t);
         setStatus("error");
       }
     }, 2000);
-    return () => clearInterval(timer);
+    return () => window.clearInterval(t);
   }, [taskId, videoId]);
 
-  /* ── render ── */
+  /* ────────── UI ────────── */
   return (
     <div className="wrapper">
       {/* search row */}
       <div className="search-row">
         <input
-          placeholder="Search for a song…"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => setQuery(e.currentTarget.value)}
           onKeyDown={handleKeyDown}
+          placeholder="Search YouTube…"
         />
-        <button onClick={handleSearch}>SEARCH</button>
+        <button onClick={handleSearch} disabled={searching}>
+          SEARCH
+        </button>
       </div>
 
-      {searching && <p className="status-text">Searching…</p>}
-
-      {videoId && !searching && (
+      {/* preview + generate */}
+      {videoId && (
         <div className="preview">
           <iframe
-            title="preview"
-            width="100%"
-            height="315"
+            width="300"
+            height="168"
             src={`https://www.youtube.com/embed/${videoId}`}
+            title="YouTube video preview"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-          />
+          ></iframe>
 
-          {/* generate button only if not already processed */}
-          {videoId !== lastGenerated && status !== "running" && (
-            <button onClick={generate} className="generate-btn">
-              GENERATE STEMS
-            </button>
-          )}
+          <button className="generate-btn" onClick={generate}>
+            Generate Stems
+          </button>
         </div>
       )}
 
+      {/* status */}
       {status === "running" && (
         <p className="status-text">Separating… please wait</p>
       )}
       {status === "error" && <p className="error-msg">Something went wrong.</p>}
 
-      {stems && meta && (
-        <div style={{ marginTop: 40 }}>
-          <StemPlayer stems={stems} meta={meta} />
-        </div>
+      {/* finished → StemPlayer */}
+      {stems && meta && audioUrl && (
+        <StemPlayer stems={stems} meta={meta} audioUrl={audioUrl} />
       )}
     </div>
   );

@@ -9,7 +9,7 @@
 /* ───────────────────────────────── master play / pause */
 .master-btn {
   display: inline-block;
-  margin: 0 auto 28px;        /* overridden in .control-row */
+  margin: 0 auto 28px;
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
@@ -35,8 +35,27 @@
   letter-spacing: 0.5px;
 }
 .stem-block input[type="range"] {
-  width: 100%;
-  max-width: 500px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 160px;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    #999 0%,
+    #999 50%,
+    #f60 50%,
+    #f60 100%
+  );
+}
+.stem-block input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid #666;
+  cursor: pointer;
 }
 
 /* ───────────────────────────────── transport row */
@@ -47,13 +66,9 @@
   gap: 12px;
   margin-bottom: 28px;
 }
+.control-row .master-btn { margin: 0; }
 
-/* remove auto margin on master button inside row */
-.control-row .master-btn {
-  margin: 0;
-}
-
-/* ───────────────────────────────── ±10-second buttons */
+/* ───────────────────────────────── ±10-sec buttons */
 .jump-btn {
   padding: 8px 16px;
   border: none;
@@ -85,25 +100,35 @@
   background: #c63c3c;
   transform: translateY(-1px);
 }
-/* StemPlayer.css additions */
-.stem-block input[type="range"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 160px;
-  height: 8px;
-  border-radius: 4px;
-  background: linear-gradient(
-    to right,
-    #999 0%,
-    #999 50%,
-    #f60 50%,
-    #f60 100%
-  );
+
+/* ──────────── close-up scrolling waveform ──────────── */
+.waveform-container {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  overflow: hidden;
+  margin-bottom: 24px;
 }
-.stem-block input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px; height: 14px;
-  border-radius: 50%;
-  background: #fff; border: 1px solid #666;
-  cursor: pointer;
+
+/* absolute canvas now has an explicit width */
+.waveform-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;          /* ← added */
+  height: 100%;
+}
+
+.waveform-container::-webkit-scrollbar { display: none; }
+
+/* fixed orange play-head */
+.playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: #f60;
+  transform: translateX(-1px);
+  pointer-events: none;
 }
