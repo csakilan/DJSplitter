@@ -1,9 +1,7 @@
 // ────────────────────────────────────────────────────────────────
-// File: src/components/MasterController.tsx
-// Unified tempo‑+‑pitch synchroniser with drift‑free maths and a full
-// reset button. Drop straight into your project.
+// Unified tempo-+-pitch synchroniser with drift-free maths and a full
+// reset button.  (Reset now sits on the far-left of the transport row.)
 // ────────────────────────────────────────────────────────────────
-
 import React, { useState, useEffect } from "react";
 import { Play, Pause, ChevronLeft, ChevronRight, Undo2 } from "lucide-react";
 import { useMixerRegistry } from "../context/MixerContext";
@@ -12,7 +10,7 @@ import "./MasterController.css";
 const MasterController: React.FC = () => {
   const { mixers } = useMixerRegistry();
 
-  /* reflect play/paused state */
+  /* reflect play / pause */
   const [isPlaying, setPlaying] = useState(false);
   useEffect(() => {
     const id = window.setInterval(
@@ -34,45 +32,43 @@ const MasterController: React.FC = () => {
       m.setPitchShift(0);
     });
 
-  /* full tempo + pitch synchronisation */
+  /* tempo + pitch sync */
   const fullSync = (refIdx: number) => {
     const ref = mixers.current[refIdx];
     if (!ref) return;
-
     const { tempo: refTempo, tonic: refTonic } = ref;
 
     mixers.current.forEach((m) => {
-      if (!m) return;
-
-      /* — tempo — */
-      const ratio = refTempo / m.tempo; // overwrite, don’t accumulate
+      const ratio = refTempo / m.tempo;
       m.setPlaybackRate(ratio);
 
-      /* pitch drift from that tempo warp */
       const drift = 12 * Math.log2(ratio);
+      let tonicΔ = (refTonic - m.tonic) % 12;
+      if (tonicΔ > 6) tonicΔ -= 12;
+      if (tonicΔ < -6) tonicΔ += 12;
 
-      /* shortest musical path between tonics (−6…+6) */
-      let tonicDelta = (refTonic - m.tonic) % 12;
-      if (tonicDelta > 6) tonicDelta -= 12;
-      if (tonicDelta < -6) tonicDelta += 12;
-
-      /* absolute semitone correction after drift */
-      const finalShift = tonicDelta - drift;
-      m.setPitchShift(finalShift);
+      m.setPitchShift(tonicΔ - drift);
     });
   };
 
-  /* build dropdown labels */
+  /* dropdown options */
   const songOptions = mixers.current.map((_, i) => ({
     index: i,
     label: `Song ${i + 1}`,
   }));
 
-  /* UI */
   return (
     <div className="master-bar">
       {/* transport buttons */}
       <div className="button-group">
+        <button
+          className="reset-btn"
+          onClick={resetAll}
+          title="Reset all tempo / pitch"
+        >
+          <Undo2 size={18} />
+        </button>
+
         <button className="jump-btn" onClick={() => jump(-10)}>
           <ChevronLeft size={20} />
         </button>
@@ -84,15 +80,11 @@ const MasterController: React.FC = () => {
         <button className="jump-btn" onClick={() => jump(10)}>
           <ChevronRight size={20} />
         </button>
-
-        <button className="reset-btn" onClick={resetAll} title="Reset all">
-          <Undo2 size={18} />
-        </button>
       </div>
 
-      {/* single dropdown for combined sync */}
+      {/* combined sync dropdown */}
       <select
-        style={{ marginLeft: 16 }}
+        className="sync-select"
         disabled={songOptions.length < 2}
         onChange={(e) => fullSync(+e.target.value)}
       >

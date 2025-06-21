@@ -1,37 +1,60 @@
+/* ───────── manual vertical offsets ───────── */
+:root {
+  --play-y-offset:  13px;   /* ↑ negative moves Play/Pause up;  ↓ positive moves down */
+  --reset-y-offset:  -11px;   /* adjust Reset button the same way */
+}
+/* ─────────────────────────────────────────── */
+
+/* outer bar */
 .master-bar {
-  flex: 1; /* fills horizontal gap between the two YouTubeSearch wrappers */
+  flex: 1;
   height: 40px;
-  margin-top: 24px; /* aligns with the search row in .wrapper */
+  margin-top: 24px;
   background: #1b1b1b;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px; /* rounded corners */
+  border-radius: 12px;
 }
 
+/* transport group */
 .button-group {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 16px;
 }
 
+/* shared button look */
 .master-bar .jump-btn,
-.master-bar .master-btn {
+.master-bar .master-btn,
+.master-bar .reset-btn {
   background: none;
   border: none;
   color: #fff;
   cursor: pointer;
-}
-
-.master-bar .master-btn {
-  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 40px; /* now matching the parent's height */
 }
 
-.master-btn{
-    padding-top: 35px
+/* Play / Pause vertical tweak */
+.master-bar .master-btn {
+  font-size: 20px;
+  height: 40px;
+  transform: translateY(var(--play-y-offset));
+}
+
+/* Reset button vertical tweak */
+.master-bar .reset-btn {
+  transform: translateY(var(--reset-y-offset));
+}
+
+/* dropdown styling */
+.sync-select {
+  margin-left: 16px;
+  background: #222;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 6px 8px;
 }
