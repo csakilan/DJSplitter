@@ -1,5 +1,4 @@
 import React, { useEffect, useReducer, useRef } from "react";
-import * as Tone from "tone";
 import { useToneMixer, StemMap, BASELINE_PCT } from "../hooks/useToneMixer";
 import { useMixerRegistry } from "../context/MixerContext";
 import { Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";

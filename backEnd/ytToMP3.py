@@ -1,32 +1,6 @@
 from yt_dlp import YoutubeDL
 import os
 
-# Specify the YouTube video URL
-
-# url = "https://www.youtube.com/watch?v=mBmCcSz6HWw"
-
-# # Set the output file path and other options
-# ydl_opts = {
-#     'format': 'bestaudio/best',  # Download the best available audio
-#     'outtmpl': 'musicFiles/%(title)s.%(ext)s',  # Output file name template
-#     'postprocessors': [{
-#         'key': 'FFmpegExtractAudio',
-#         'preferredcodec': 'mp3',
-#         'preferredquality': '192',
-#     }],
-# }
-
-# try:
-#     # Download and convert to MP3
-#     with YoutubeDL(ydl_opts) as ydl:
-#         ydl.download([url])
-
-#     print("Download and conversion to MP3 completed successfully.")
-
-# except Exception as e:
-#     print(f"An error occurred: {e}")
-
-
 def returnMP3File(url):
     # Define output directory
     output_directory = "musicFiles"
