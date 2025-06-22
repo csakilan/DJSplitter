@@ -3,9 +3,11 @@
 
 # MUSIC SPLITTER
 
-React • Flask • Demucs • Celery/Redis
+React • Flask • Demucs • Celery/Redis • Tone.js • WaveSurfer.js • Librosa
 
-A playground to test out different music combinations!
+**A playground to test out different music combinations!**
+
+**Separate songs into their different parts, and control the volume, pitch, and tempo to mix and mash together two different songs to create a masterpiece!**
 
 **YouTube → stems → real-time web mixer** with independent pitch/tempo controls and draggable wave-forms.
 
@@ -66,7 +68,6 @@ repo/
    - In your backend folder, create (and git-ignore) a file `backend/.env` with:
      ```env
      YT_API_KEY=YOUR_YOUTUBE_API_KEY_HERE
-     REDIS_URL=redis://localhost:6379/0
      ```
 
 
