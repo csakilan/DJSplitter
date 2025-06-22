@@ -3,8 +3,6 @@ import axios from "axios";
 import StemPlayer from "./StemPlayer";
 import "./YoutubeSearch.css";
 
-const YT_API_KEY = "AIzaSyAHBjl1GVP7FOdP_ukHnKIyaWcr8iu51IY";
-const YT_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
 const BACKEND = "http://127.0.0.1:8080";
 
 type StemMap = Record<string, string>;
@@ -22,19 +20,13 @@ const YouTubeSearch: React.FC = () => {
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [status, setStatus] = useState<"idle" | "running" | "error">("idle");
 
-  /* ────────── YouTube search ────────── */
+  /* ────────── YouTube search via backend proxy ────────── */
   const handleSearch = async () => {
     if (!query.trim()) return;
     try {
       setSearching(true);
-      const { data } = await axios.get(YT_SEARCH_URL, {
-        params: {
-          part: "snippet",
-          q: query,
-          maxResults: 1,
-          key: YT_API_KEY,
-          type: "video",
-        },
+      const { data } = await axios.get(`${BACKEND}/API/search`, {
+        params: { q: query },
       });
       const item = data.items?.[0];
       if (!item) throw new Error("No results");
@@ -77,7 +69,6 @@ const YouTubeSearch: React.FC = () => {
           window.clearInterval(t);
           setStems(data.stems ?? data.result);
           setAudioUrl(data.original_url);
-          /* optional key / tempo */
           const metaRes = await axios.post(`${BACKEND}/API/pitch`, {
             url: `https://www.youtube.com/watch?v=${videoId}`,
           });
@@ -98,7 +89,6 @@ const YouTubeSearch: React.FC = () => {
   /* ────────── UI ────────── */
   return (
     <div className="wrapper">
-      {/* search row */}
       <div className="search-row">
         <input
           value={query}
@@ -111,7 +101,6 @@ const YouTubeSearch: React.FC = () => {
         </button>
       </div>
 
-      {/* preview + generate */}
       {videoId && (
         <div className="preview">
           <iframe
@@ -121,21 +110,18 @@ const YouTubeSearch: React.FC = () => {
             title="YouTube video preview"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-          ></iframe>
-
+          />
           <button className="generate-btn" onClick={generate}>
             Generate Stems
           </button>
         </div>
       )}
 
-      {/* status */}
       {status === "running" && (
         <p className="status-text">Separating… please wait</p>
       )}
       {status === "error" && <p className="error-msg">Something went wrong.</p>}
 
-      {/* finished → StemPlayer */}
       {stems && meta && audioUrl && (
         <StemPlayer stems={stems} meta={meta} audioUrl={audioUrl} />
       )}

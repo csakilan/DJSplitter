@@ -17,3 +17,5 @@ uploads/
 
 # OS-specific
 .DS_Store
+
+backend/.env
