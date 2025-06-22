@@ -20,7 +20,7 @@ React • Flask • Demucs • Celery/Redis • Tone.js • WaveSurfer.js • Li
 | **Front-end**  | React + TypeScript · Vite · WaveSurfer.js · Tone.js | • Renders draggable, scrolling wave-forms for each song<br>• Mixes isolated stems in the browser with per-stem volume & global pitch/tempo<br>• “Master Controller” syncs multiple songs (tempo + tonic) in one click |
 | **Back-end**   | Flask (REST)                                        | • `/API/generate` → downloads YouTube audio (yt-dlp) → converts to MP3 → enqueues Demucs<br>• Streams separated stems **and** the full-mix MP3<br>• `/API/pitch` returns key / tempo JSON                             |
 | **Separation** | Demucs v4                                           | Splits MP3 into `vocals / drums / bass / other`                                                                                                                                                                       |
-| **Long jobs**  | Celery + Redis                                      | Runs Demucs without blocking Flask; workers speed up on **CUDA** GPUs or Apple **Metal (MPS)**                                                                                                                        |
+| **Long jobs**  | Celery + Redis                                      | Runs Demucs without blocking Flask since some demucs calls might take more than 30 secs causing frontend to timeout; workers speed up on **CUDA** GPUs or Apple **Metal (MPS)**                                                                                                                        |
 | **Music meta** | `librosa` + `key_detect.py`                         | • `beat_track` → tempo (BPM)<br>• Krumhansl key estimation → tonic/key                                                                                                                                                |
 
 ---
@@ -60,7 +60,8 @@ repo/
 
    ```bash
    python -m venv venv && source venv/bin/activate
-   pip install -r requirements.txt           
+   pip install -r requirements.txt
+   brew install redis      
    ```
 1a. **Configure YouTube Data API v3 key**  
    - Go to Google Cloud Console → Enable **YouTube Data API v3**  
