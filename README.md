@@ -1,8 +1,13 @@
+
+![MusicSplitterImage](https://github.com/user-attachments/assets/4913ac65-e6bb-422b-b7c3-38f3de24c46d)
+
 # MUSIC SPLITTER
 
 React • Flask • Demucs • Celery/Redis
 
-An end-to-end playground for **YouTube → stems → real-time web mixer** with independent pitch/tempo controls and draggable wave-forms.
+A playground to test out different music combinations!
+
+**YouTube → stems → real-time web mixer** with independent pitch/tempo controls and draggable wave-forms.
 
 ---
 
@@ -55,6 +60,15 @@ repo/
    python -m venv venv && source venv/bin/activate
    pip install -r requirements.txt           
    ```
+1a. **Configure YouTube Data API v3 key**  
+   - Go to Google Cloud Console → Enable **YouTube Data API v3**  
+   - Under **Credentials**, create an **API key**  
+   - In your backend folder, create (and git-ignore) a file `backend/.env` with:
+     ```env
+     YT_API_KEY=YOUR_YOUTUBE_API_KEY_HERE
+     REDIS_URL=redis://localhost:6379/0
+     ```
+
 
 2. **Flask API**
 
