@@ -1,7 +1,7 @@
 
 ![MusicSplitterImage](https://github.com/user-attachments/assets/4913ac65-e6bb-422b-b7c3-38f3de24c46d)
 
-# MUSIC SPLITTER
+# DJ SPLITTER
 
 React • Flask • Demucs • Celery/Redis • Tone.js • WaveSurfer.js • Librosa
 
